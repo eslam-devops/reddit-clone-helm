@@ -1,0 +1,19 @@
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: test-gateway
+      namespace: default
+
+  hostnames:
+    - hotel.local
+
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 80
+          weight: 1
+
