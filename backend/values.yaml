@@ -54,7 +54,7 @@ config:
   DB_PORT: "5432"
   DB_USER: zain
   DB_NAME: hotel_db
-  BACKEND_PORT: "8000"
+  PORT: "8000"
 
 # Secrets configuration
 secrets:
