@@ -1,20 +1,18 @@
-# 🚀 Argo CD Installation on EC2 (Ubuntu)
+# 🚀 Argo CD Installation on EC2 (Amazon Linux – dnf)
 
-This guide explains how to install **Argo CD** on an **EC2 instance** using **Kubernetes (Minikube)**.
+This guide explains how to install **Docker**, **Minikube**, and **Argo CD**
+on an **EC2 instance running Amazon Linux** using **dnf**.
 
 ---
 
 ## 📌 Prerequisites
 
-Before starting, make sure you have:
-
-- EC2 instance (Ubuntu 20.04+)
+- EC2 instance (Amazon Linux 2023 / Amazon Linux 2)
 - SSH access to the instance
 - User with sudo privileges
-- At least **2 vCPU / 4 GB RAM** (recommended)
-- Open ports:
+- Minimum: **2 vCPU / 4 GB RAM**
+- Security Group open ports:
   - 22 (SSH)
-  - 80 / 443
   - 8080 (Argo CD UI)
 
 ---
@@ -22,24 +20,34 @@ Before starting, make sure you have:
 ## 🔹 Step 1: Update System
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo dnf update -y
 ```
 
 ---
 
 ## 🔹 Step 2: Install Docker
 
+### Install Docker
 ```bash
-sudo apt install -y docker.io
+sudo dnf install -y docker
+```
+
+### Start & Enable Docker
+```bash
 sudo systemctl start docker
 sudo systemctl enable docker
+```
+
+### Add user to Docker group
+```bash
 sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-Verify:
+### Verify Docker
 ```bash
 docker --version
+docker ps
 ```
 
 ---
@@ -49,10 +57,10 @@ docker --version
 ```bash
 curl -LO https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
 chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
+sudo mv kubectl /usr/local/bin/kubectl
 ```
 
-Verify:
+### Verify
 ```bash
 kubectl version --client
 ```
@@ -67,12 +75,12 @@ chmod +x minikube-linux-amd64
 sudo mv minikube-linux-amd64 /usr/local/bin/minikube
 ```
 
-Start Minikube:
+### Start Minikube (Docker driver)
 ```bash
 minikube start --driver=docker
 ```
 
-Verify:
+### Verify Cluster
 ```bash
 kubectl get nodes
 ```
@@ -81,32 +89,34 @@ kubectl get nodes
 
 ## 🔹 Step 5: Install Argo CD
 
-Create Namespace:
+### Create Namespace
 ```bash
 kubectl create namespace argocd
 ```
 
-Apply Argo CD Manifest:
+### Install Argo CD
 ```bash
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
-Check Pods:
+### Check Pods
 ```bash
 kubectl get pods -n argocd
 ```
 
+Wait until all pods are in **Running** state.
+
 ---
 
-## 🔹 Step 6: Expose Argo CD Server
+## 🔹 Step 6: Expose Argo CD UI
 
-### Option 1: Port Forwarding
+### Option 1: Port Forward (Recommended)
 
 ```bash
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
-Access:
+Access UI:
 ```
 https://<EC2_PUBLIC_IP>:8080
 ```
@@ -117,6 +127,9 @@ https://<EC2_PUBLIC_IP>:8080
 
 ```bash
 kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
+```
+
+```bash
 kubectl get svc -n argocd
 ```
 
@@ -127,37 +140,52 @@ https://<EC2_PUBLIC_IP>:<NODE_PORT>
 
 ---
 
-## 🔹 Step 7: Get Admin Password
+## 🔹 Step 7: Get Argo CD Admin Password
 
 ```bash
 kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode
 ```
 
-Username: admin  
-Password: output of the command
+Login:
+- **Username:** admin
+- **Password:** output of the command
 
 ---
 
-## 🔹 Step 8: Install Argo CD CLI (Optional)
+## 🔹 Step 8: (Optional) Install Argo CD CLI
 
 ```bash
 curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+
 chmod +x argocd
-sudo mv argocd /usr/local/bin/
+sudo mv argocd /usr/local/bin/argocd
 ```
 
-Verify:
+### Verify
 ```bash
 argocd version
 ```
 
 ---
 
-## 🧪 Verification
+## 🧪 Final Verification
 
 ```bash
 kubectl get all -n argocd
 ```
+
+If all resources are running → 🎉 **Argo CD Installed Successfully**
+
+---
+
+## 🛑 Troubleshooting
+
+- Docker permission denied → relogin or run `newgrp docker`
+- Minikube not starting → check:
+  ```bash
+  minikube status
+  ```
+- UI not accessible → check EC2 Security Group ports
 
 ---
 
@@ -165,3 +193,4 @@ kubectl get all -n argocd
 
 - https://argo-cd.readthedocs.io
 - https://kubernetes.io
+- https://minikube.sigs.k8s.io
